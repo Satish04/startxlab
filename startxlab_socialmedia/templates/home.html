@@ -14,9 +14,7 @@
         <span class="icon-bar"></span>
       </button>
       <a class="navbar-brand" href="#">
-            {% for user in data %}
-                    <h6>Wellcome  {{user.first_name}}</h6>
-          {% endfor %}
+          Welcome Dashboard
       </a>
     </div>
 
@@ -51,29 +49,91 @@
 
     <div class="container ">
         <div class="row">
-            <div class="col-sm-6 col-lg-6 offset-lg-4">
+            <div class="col-lg-6  offset-lg-4">
                 <div class="form-group purple-border">
                     <!--<label for="exampleFormControlTextarea4">Post</label>-->
-                    <form method="post" action="/api/v1/comments/">
+                    <form name="postForm" id="postForm">
                         {% csrf_token %}
                         <input class="form-control" type="text" name="title" placeholder="Title"><br>
                         <textarea class="form-control" id="a" name="post_data" rows="3" placeholder="Text"></textarea>
                         <input type="hidden" name="user_id" value="{{member_id}}"><br>
-                        <button type="submit" class="btn btn-success">Post</button>
+                        <button type="submit" class="btn btn-success postbtn">Post</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
+    <div class="container ">
+        <div class="row">
+            <div class="col-lg-6  offset-lg-4">
+                <div id="comments">
+                    {% if data %}
+                    {% for item in data %}
+                        <div class='card col-lg-12'>
+                            <div class='card-body'>
+                                <h5 class='card-title'>{{item.title}}</h5>
+                                <h6 class='card-subtitle mb-2 text-muted'>{{item.created_date}} | by {{item.user_details.first_name}} {{item.user_details.last_name}}</h6>
+                                <p class='card-text'>{{item.comment_text}}</p>
+                                <button type="button" class="btn btn-default likedislike" id="{{item.comment_id}}-{{item.likedislike}}">Like</button>
+                            </div>
+                        </div><br>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-{% for comment in comments %}
-    {{comment.title }} <br> {{comment.comment_text}}<br>
-    {{comment.created_date}}
-    {{comment.user_details}}
-<br><br><br>
+</div>
+</div>
 
-{% endfor %}
-</div>
-</div>
+{% endblock %}
 
+{% block javascript %}
+  <script>
+        $("form").submit(function( event ) {
+                var values = $(this).serializeArray();
+                console.log( $( this ).serializeArray() );
+                event.preventDefault();
+                data = {}
+                for (field in values){
+                    data[values[field]['name']] = values[field]['value']
+                }
+                $('.form-control').val('')
+                 $.ajax({
+                    type: "POST",
+                    url: "/api/v1/comments/",
+                    data: data,
+                    success: function (response) {
+                        console.log(response)
+                        //$('.comments').remove();
+                        var html = '';
+
+                        for(item in response){
+                            html += "<div class='card col-lg-12'><div class='card-body'><h5 class='card-title'>"+response[item]['title']+"</h5><h6 class='card-subtitle mb-2 text-muted'>"+response[item]['created_date']+"</h6><p class='card-text'>"+response[item]['comment_text']+"</p><a href='#' class='card-link'>Card link</a><a href='#' class='card-link'>Another link</a></div></div><br>";
+                        }
+                        $('#comments').empty();
+                        $('#comments').append(html)
+
+                    }
+            });
+        });
+        $('.likedislike').click(function( event ){
+            var commnet = $(this).attr("id").split('-');
+            var commnet_id = commnet[0];
+            var likedislike = commnet[1];
+            event.preventDefault();
+            data = {'commnet_id': commnet_id, 'likedisliked': likedislike}
+            console.log(data)
+            $.ajax({
+                    type: "POST",
+                    url: "/api/v1/likedislike/",
+                    data: data,
+                    success: function (response) {
+                        console.log(response)
+                    }
+
+             });
+        });
+  </script>
 {% endblock %}

@@ -74,6 +74,9 @@
     }
   }
 }
+.btn-default{
+border: 1px solid black;
+}
 </style>
 </head>
 <body>
@@ -100,6 +103,6 @@
 	<script src="{% static 'vendor/countdowntime/countdowntime.js' %}"></script>
 <!--===============================================================================================-->
 	<script src="{% static 'js/main.js' %}"></script>
-
+{% block javascript %}{% endblock %}
 </body>
 </html>

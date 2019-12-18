@@ -27,3 +27,10 @@ class CommentsSerializer(serializers.ModelSerializer):
     class Meta:
         model = CommentsModel
         fields = ('user_id', 'title', 'comment_text', 'comment_id', 'created_date', 'published_date')
+
+
+class LikeDislikeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LikedislikeModel
+        fields = ('id','comment_id', 'user_id', 'created_date', 'likedisliked')
+
