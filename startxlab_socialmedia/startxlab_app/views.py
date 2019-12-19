@@ -26,6 +26,10 @@ class User(viewsets.ViewSet):
     def signup(self, request):
         return render(request, 'signup.html', {'title': 'Page', 'content': 'Hello Login'})
 
+    def logout(self, request):
+        request.session['member_id'] = False
+        return render(request, 'login.html', {'title': 'Page', 'content': 'Hello Login'})
+
     def home(self, request):
         print request.data
         serializer_class = UsersSerializer
@@ -52,29 +56,10 @@ class User(viewsets.ViewSet):
                     return render(request, 'login.html', {'title': 'Page', 'content': 'Hello Login'})
                 else:
                     request.session['member_id'] = users[0]['user_id']
-                    serializer_class = CommentsSerializer
-                    comments = CommentsModel.objects.all().order_by('-created_date')
-                    comment_data = serializer_class(comments, many=True).data
-                    print comment_data
-                    if len(comment_data) > 0:
-                        for item in comment_data:
-                            item['created_date'] = (datetime.datetime.strptime(item['created_date'], '%Y-%m-%dT%H:%M:%S.%f')).strftime('%d %b, %Y %I:%M %p')
-                            condition1 = Q(user_id=item['user_id'])
-                            user = Users.objects.filter(condition1)
-                            user_detail = UsersSerializer(user, many=True).data
-                            item['user_details'] = user_detail[0]
+                    commnet_data = check_comments(users)
 
-                            condition1 = Q(comment_id=item['comment_id'])
-                            condition2 = Q(user_id=users[0]['user_id'])
-                            get_likedislike = LikedislikeModel.objects.filter(condition1 & condition2)
-                            if get_likedislike:
-                                likedislike = LikeDislikeSerializer(get_likedislike, many=True).data
-                                item['likedislike'] = likedislike[0]['likedisliked']
-                            else:
-                                item['likedislike'] = 0
-
-                        return render(request, 'home.html', {'title': 'Page', 'data': comment_data, 'member_id': users[0]['user_id']})
-                    return render(request, 'home.html', {'title': 'Page', 'data': False, 'member_id': ''})
+                    return render(request, 'home.html', {'title': 'Page', 'data': commnet_data, 'member_id': users[0]['user_id']})
+                    #return render(request, 'home.html', {'title': 'Page', 'data': False, 'member_id': ''})
 
 class Comments(viewsets.ViewSet):
 
@@ -93,6 +78,7 @@ class Comments(viewsets.ViewSet):
                 serializer_class = CommentsSerializer
                 comments = CommentsModel.objects.all().order_by('-created_date')
                 comment_data = serializer_class(comments, many=True).data
+                print comment_data
                 if len(comment_data) > 0:
                     for item in comment_data:
                         item['created_date'] = (datetime.datetime.strptime(item['created_date'], '%Y-%m-%dT%H:%M:%S.%f')).strftime('%d %b, %Y %I:%M %p')
@@ -105,13 +91,16 @@ class Comments(viewsets.ViewSet):
                         condition1 = Q(comment_id=item['comment_id'])
                         condition2 = Q(user_id=member_id)
                         get_likedislike = LikedislikeModel.objects.filter(condition1 & condition2)
-                        if get_likedislike:
+                        print get_likedislike
+                        if len(get_likedislike):
                             likedislike = LikeDislikeSerializer(get_likedislike, many=True).data
-                            item['likedislike'] = likedislike[0]['likedisliked']
+                            #print likedislike
+                            item['likedislike'] = likedislike[0]['likedisliked'].name
                         else:
-                            item['likedislike'] =  0
+                            item['likedislike'] =  'dislike'
+                    print comment_data
                     return HttpResponse(json.dumps(comment_data), content_type="application/json")
-                return render(request, 'home.html', {'title': 'Page', 'comments': False, 'member_id': member_id})
+                return HttpResponse('', content_type="application/json")
         else:
             return render(request, 'login.html', {'title': 'Page', 'content': 'Hello Login'})
 
@@ -125,17 +114,25 @@ class Likedislike(viewsets.ViewSet):
             #user_id = member_id
             print comment_id, 'njihu'
             likedisliked = request.data['likedisliked']
+            print likedisliked
+            if likedisliked == 'dislike':
+                like_dislike = 1
+            elif likedisliked == 'like':
+                like_dislike = 0
             if comment_id != '' and likedisliked != '':
                 data = LikedislikeModel(
                     comment_id=comment_id,
                     user_id=member_id,
-                    likedisliked=likedisliked,
+                    likedisliked=like_dislike,
                 )
                 data.save()
                 condition1 = Q(comment_id=comment_id)
                 condition2 = Q(user_id=member_id)
                 get_likedislike = LikedislikeModel.objects.filter(condition1 & condition2)
                 likedislike_res = LikeDislikeSerializer(get_likedislike, many=True).data
+                for item in likedislike_res:
+                    item['likedisliked'] = item['likedisliked'].name
+                print likedislike_res
                 return HttpResponse(json.dumps(likedislike_res), content_type="application/json")
         else:
             return render(request, 'login.html', {'title': 'Page', 'content': 'Hello Login'})
@@ -144,3 +141,28 @@ class Likedislike(viewsets.ViewSet):
 
 
 
+def check_comments(users):
+    serializer_class = CommentsSerializer
+    comments = CommentsModel.objects.all().order_by('-created_date')
+    comment_data = serializer_class(comments, many=True).data
+
+    if len(comment_data) > 0:
+        for item in comment_data:
+            item['created_date'] = (datetime.datetime.strptime(item['created_date'], '%Y-%m-%dT%H:%M:%S.%f')).strftime(
+                '%d %b, %Y %I:%M %p')
+            condition1 = Q(user_id=item['user_id'])
+            user = Users.objects.filter(condition1)
+            user_detail = UsersSerializer(user, many=True).data
+            item['user_details'] = user_detail[0]
+
+            condition1 = Q(comment_id=item['comment_id'])
+            condition2 = Q(user_id=users[0]['user_id'])
+            get_likedislike = LikedislikeModel.objects.filter(condition1 & condition2)
+            if get_likedislike:
+                likedislike = LikeDislikeSerializer(get_likedislike, many=True).data
+                item['likedislike'] = likedislike[0]['likedisliked'].name
+            else:
+                item['likedislike'] = 'dislike'
+
+        return comment_data
+    return False
