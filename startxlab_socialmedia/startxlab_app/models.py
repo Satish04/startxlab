@@ -33,6 +33,7 @@ class CommentsModel(models.Model):
     class Meta:
         db_table = 'comments'
 
+
 class Enumlikedislike(enum.Enum):
     like = 1
     dislike = 0
